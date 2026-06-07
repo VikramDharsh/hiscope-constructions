@@ -154,10 +154,11 @@ async def list_contact_submissions():
 
 app.include_router(api_router)
 
+_cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials='*' not in _cors_origins,
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -167,6 +168,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def startup_db_client():
+    try:
+        await client.admin.command("ping")
+        logger.info("MongoDB connection OK")
+    except Exception as e:
+        logger.error(f"MongoDB connection failed: {e}")
 
 
 @app.on_event("shutdown")
