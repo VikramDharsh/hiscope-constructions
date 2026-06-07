@@ -117,39 +117,65 @@ def _build_contact_email_html(sub: ContactSubmission) -> str:
 
 @api_router.post("/contact", response_model=ContactSubmission)
 async def create_contact_submission(payload: ContactSubmissionCreate):
-    sub = ContactSubmission(**payload.model_dump())
+    try:
+        sub = ContactSubmission(**payload.model_dump())
 
-    # Try sending via Resend (non-blocking) if configured
-    email_sent = False
-    if RESEND_API_KEY and CONTACT_RECIPIENT_EMAIL:
-        try:
-            params = {
-                "from": SENDER_EMAIL,
-                "to": [CONTACT_RECIPIENT_EMAIL],
-                "reply_to": [str(sub.email)],
-                "subject": f"New inquiry from {sub.name} — Hiscope Construction",
-                "html": _build_contact_email_html(sub),
-            }
-            await asyncio.to_thread(resend.Emails.send, params)
-            email_sent = True
-        except Exception as e:
-            logging.getLogger(__name__).error(f"Resend send failed: {e}")
+        # Try sending via Resend (non-blocking) if configured
+        email_sent = False
+        if RESEND_API_KEY and CONTACT_RECIPIENT_EMAIL:
+            try:
+                params = {
+                    "from": SENDER_EMAIL,
+                    "to": [CONTACT_RECIPIENT_EMAIL],
+                    "reply_to": [str(sub.email)],
+                    "subject": f"New inquiry from {sub.name} — Hiscope Construction",
+                    "html": _build_contact_email_html(sub),
+                }
+                await asyncio.to_thread(resend.Emails.send, params)
+                email_sent = True
+            except Exception as e:
+                logging.getLogger(__name__).error(f"Resend send failed: {e}")
 
-    sub.email_sent = email_sent
-    doc = sub.model_dump()
-    doc['email'] = str(doc['email'])
-    doc['created_at'] = doc['created_at'].isoformat()
-    await db.contact_submissions.insert_one(doc)
-    return sub
+        sub.email_sent = email_sent
+        doc = sub.model_dump()
+        doc['email'] = str(doc['email'])
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.contact_submissions.insert_one(doc)
+        return sub
+    except Exception as e:
+        logger.exception("Failed to create contact submission")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+def _parse_created_at(value):
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return value
+
+
+@api_router.get("/health")
+async def health_check():
+    try:
+        await client.admin.command("ping")
+        count = await db.contact_submissions.count_documents({})
+        return {"status": "ok", "database": os.environ.get("DB_NAME"), "submissions": count}
+    except Exception as e:
+        logger.exception("Health check failed")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
 @api_router.get("/contact", response_model=List[ContactSubmission])
 async def list_contact_submissions():
-    rows = await db.contact_submissions.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    for r in rows:
-        if isinstance(r.get('created_at'), str):
-            r['created_at'] = datetime.fromisoformat(r['created_at'])
-    return rows
+    try:
+        rows = await db.contact_submissions.find({}, {"_id": 0}).sort([("created_at", -1)]).to_list(500)
+        for r in rows:
+            r["created_at"] = _parse_created_at(r.get("created_at"))
+        return rows
+    except Exception as e:
+        logger.exception("Failed to list contact submissions")
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
 app.include_router(api_router)
