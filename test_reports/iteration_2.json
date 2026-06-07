@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 2 testing of Hiscope Constructions site. Backend: 9/9 pytest cases still pass (root, /api/contact POST + 5 validation cases, GET /api/contact list sort & no _id leak, /api/status legacy). Frontend: header logo shows 'Hiscope·Constructions', footer shows USA (Sheridan, Wyoming 82801) + India (Madhapur, HITEC City Hyderabad) offices, phone +1 937 530 5382 and Info@hiscopeconstructions.com. Contact form: empty submission shows toast and does NOT open popup; valid submission opens Dialog with both mailto links — popup-mailto-constructions href starts with mailto:hr@hiscopeconstructions.com and popup-mailto-technologies starts with mailto:hr@hiscopetechnologies.com, each with encoded subject + body containing form data. Project detail page /projects/northbay-tower renders hero, meta grid (Location=Sheridan, WY), Scope, Highlights, Gallery, and Next-project link to /projects/harbor-logistics. Invalid id /projects/does-not-exist redirects to /projects. Admin /admin/inquiries renders, lists 9 submissions from GET /api/contact, refresh works. SEO: sitemap.xml is valid XML containing all 12 page URLs including all 6 project detail slugs. /robots.txt response (served from preview CDN) contains 'Disallow: /admin' and 'Sitemap: /sitemap.xml' appended after the Cloudflare AI content-signals preamble. document.title differs per route (About vs Services).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_hiscope_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "robots.txt served at the public preview URL is prefixed with a long Cloudflare AI Content-Signals preamble (likely auto-injected by the preview/CDN layer). The required 'Disallow: /admin' and 'Sitemap: /sitemap.xml' lines are both present at the end, so requirements are met — but the prepended content also contains many 'Disallow: /' lines (one per AI crawler agent) which a quick visual scan could mistake for a global block. No action needed in code; flagging for awareness.",
+    "server.py still imports `resend` even though the iteration-2 spec replaced Resend with mailto popup. The POST /api/contact still tries Resend if RESEND_API_KEY is set (currently empty so harmless), but consider removing the import + send branch to simplify and reduce dependency surface.",
+    "Contact.jsx fires axios POST /api/contact in a non-awaited promise — if the backend is down the user will never see an error. Acceptable as documented best-effort behavior, but a console.warn on failure would aid debugging.",
+    "/admin/inquiries is intentionally unprotected per spec — recommend adding at minimum a basic auth or token check before public sharing.",
+    "Deprecated @app.on_event('shutdown') still in server.py (carry-over from iteration 1) — migrate to FastAPI lifespan handlers."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "N/A — no auth in this app",
+  "seed_data_creation": "Test runs added several TEST_-prefixed contact_submissions during pytest and one 'Test User' submission via the UI flow. /admin/inquiries currently shows 9 inquiries.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend base = REACT_APP_BACKEND_URL + /api. Key data-testids: site-logo, footer-office-usa, footer-office-india, footer-phone, footer-email, contact-form, input-name/email/phone/message, select-service, submit-contact, contact-popup, popup-mailto-constructions, popup-mailto-technologies, project-detail-page, project-meta-location, next-project, back-to-projects, admin-page, admin-refresh, admin-empty, inquiry-{id}. Project ids: northbay-tower, harbor-logistics, ashworth-residence, district7-retail, foundry-lofts, meridian-distribution. Note: preview /robots.txt has CDN-injected AI content-signals preamble before the project's own rules.",
+  "rca of the issue": "N/A — no issues found"
+}

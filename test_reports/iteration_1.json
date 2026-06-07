@@ -1,0 +1,32 @@
+{
+  "summary": "Full-stack testing of Hiscope Construction marketing site. Backend: 9/9 pytest cases passed (root, /api/contact valid+5 validation cases, /api/contact list sort & no _id, /api/status legacy). Frontend: Home/About/Services/Projects/Careers/Contact all render correctly, projects filter works, careers has mailto links, contact form validates empty submission (toast) and successfully posts with toast success + form reset. Nav & footer confirmed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_hiscope_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "RESEND integration is intentionally skipped (empty API key) — gracefully returns email_sent=false as specified.",
+    "server.py uses deprecated @app.on_event('shutdown'); consider migrating to FastAPI lifespan handlers in future.",
+    "Consider adding rate limiting on POST /api/contact to prevent spam once the endpoint is public."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_hiscope_api.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "N/A — no auth in this app",
+  "seed_data_creation": "Several TEST_-prefixed contact_submissions and status_checks documents were created in MongoDB during testing (ok per spec; no cleanup endpoint provided).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend base = REACT_APP_BACKEND_URL + /api. Contact form data-testids: input-name, input-email, input-phone, select-service (custom shadcn Select), input-message, submit-contact. Toast text: success = 'Thanks — we'll be in touch within one business day.'; validation = 'Please fill in name, email, and message.'",
+  "rca of the issue": "N/A — no issues found"
+}
