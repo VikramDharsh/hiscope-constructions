@@ -59,6 +59,10 @@ export default function Contact() {
   const update = (k) => (e) =>
     setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : e }));
 
+  const openMailto = (toEmail) => {
+    window.location.href = buildMailto(toEmail, form);
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
@@ -70,7 +74,7 @@ export default function Contact() {
 
     setSubmitting(true);
     try {
-      // Persist a copy to MongoDB for our records (best-effort, non-blocking UX)
+      // Save to MongoDB (best-effort, non-blocking)
       axios
         .post(`${API}/contact`, {
           name: form.name.trim(),
@@ -80,9 +84,12 @@ export default function Contact() {
           message: form.message.trim(),
         })
         .catch(() => {
-          /* swallow — popup mailto is the primary path */
+          /* saved copy is optional — mailto is primary */
         });
 
+      // Open email app immediately while we still have the button click gesture
+      openMailto(COMPANY.contactEmails.hrConstructions);
+      toast.success("Opening your email app…");
       setPopupOpen(true);
     } finally {
       setSubmitting(false);
@@ -294,8 +301,8 @@ export default function Contact() {
               </button>
 
               <p className="text-xs text-brand-muted">
-                Submitting opens your email client with the message ready to send. We
-                also keep a copy for our records.
+                Submitting opens your email app with the message ready to send (fill in
+                the project brief below). We also save a copy to our records.
               </p>
             </form>
           </div>
@@ -313,8 +320,8 @@ export default function Contact() {
                 Choose a recipient
               </DialogTitle>
               <DialogDescription className="text-white/70 text-sm leading-relaxed">
-                Your message is ready. Pick the team that fits — your email client will
-                open with the details pre-filled.
+                Your message is ready. If your email app did not open, click a recipient
+                below. Otherwise, send the draft that opened and close this window.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -322,7 +329,11 @@ export default function Contact() {
           <div className="p-6 space-y-4 bg-white">
             <a
               href={buildMailto(COMPANY.contactEmails.hrConstructions, form)}
-              onClick={onMailtoChosen}
+              onClick={(e) => {
+                e.preventDefault();
+                openMailto(COMPANY.contactEmails.hrConstructions);
+                onMailtoChosen();
+              }}
               data-testid="popup-mailto-constructions"
               className="group flex items-start gap-4 border border-brand-line p-5 hover:border-brand-ink hover:bg-brand-bg transition-colors"
             >
@@ -345,7 +356,11 @@ export default function Contact() {
 
             <a
               href={buildMailto(COMPANY.contactEmails.hrTechnologies, form)}
-              onClick={onMailtoChosen}
+              onClick={(e) => {
+                e.preventDefault();
+                openMailto(COMPANY.contactEmails.hrTechnologies);
+                onMailtoChosen();
+              }}
               data-testid="popup-mailto-technologies"
               className="group flex items-start gap-4 border border-brand-line p-5 hover:border-brand-ink hover:bg-brand-bg transition-colors"
             >
